@@ -45,15 +45,53 @@ public class CoreDataManager {
     
     
     
-   public private(set) lazy var managedObjectContext:NSManagedObjectContext = {
-        let managedContext = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+   public private(set) lazy var privateManagedObjectContext:NSManagedObjectContext = {
+        let managedContext = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
         managedContext.persistentStoreCoordinator = self.persistantStoreCoordinator
         return managedContext
         
     }()
+    
+    
+    public private(set) lazy var mainManagedObjectContext:NSManagedObjectContext = {
+        
+        let managedObjectContext = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        managedObjectContext.parent = self.privateManagedObjectContext
+        return managedObjectContext
+    }()
+    
+    public func save() {
+        
+        mainManagedObjectContext.performAndWait {
+            
+            do {
+                
+                if self.mainManagedObjectContext.hasChanges {
+                    try self.mainManagedObjectContext.save()
+                }
+                
+            } catch {
+                fatalError("Main Context Failed to Save")
+            }
+        }
+        
+        privateManagedObjectContext.perform {
+            do {
+                if self.privateManagedObjectContext.hasChanges {
+                    try self.privateManagedObjectContext.save()
+                }
+                
+                
+            } catch {
+                fatalError("private Context Failed to Save")
+            }
+        }
+    }
+    
+    
     public let modelName:String?
     init(modelName:String) {
-    self.modelName = modelName
-}
+        self.modelName = modelName
+    }
 
 }
