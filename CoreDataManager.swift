@@ -21,8 +21,36 @@ public class CoreDataManager {
         return managedModel
     }()
     
+    private lazy var persistantStoreCoordinator : NSPersistentStoreCoordinator = {
+        
+        let persistantCord = NSPersistentStoreCoordinator(managedObjectModel: self.managedObjectModel)
+        
+        let fileManager = FileManager.default
+        let storeName = self.modelName!+".sqlite"
+        let documentDirectoryPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let persistantStoreCoordinatorPath = documentDirectoryPath.appendingPathComponent(storeName)
+        do {
+            
+            let options = [NSMigratePersistentStoresAutomaticallyOption : true,
+                           NSInferMappingModelAutomaticallyOption : true]
+            
+            try persistantCord.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: persistantStoreCoordinatorPath, options: options)
+            
+            
+        } catch {
+            fatalError("fatal error")
+        }
+        return persistantCord
+    }()
     
-
+    
+    
+   public private(set) lazy var managedObjectContext:NSManagedObjectContext = {
+        let managedContext = NSManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        managedContext.persistentStoreCoordinator = self.persistantStoreCoordinator
+        return managedContext
+        
+    }()
     public let modelName:String?
     init(modelName:String) {
     self.modelName = modelName
