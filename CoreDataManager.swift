@@ -11,6 +11,22 @@ import CoreData
 
 typealias CoreDataManagerCompletion = () -> ()
 
+
+
+/*
+
+============= Core Data Stack=====================
+
+  MainManagedObjectContext (Child Context)
+            |
+   PrivateManagedObjectContext (Parent Context)
+            |
+   PersistantStoreCoordinator
+            |
+   PersistantStore
+
+*/
+
 public class CoreDataManager {
 
 
