@@ -9,7 +9,14 @@
 import Foundation
 import CoreData
 
+typealias CoreDataManagerCompletion = () -> ()
+
 public class CoreDataManager {
+
+
+    
+    public let modelName:String?
+    private let completion:CoreDataManagerCompletion
 
     private lazy var managedObjectModel :NSManagedObjectModel = {
         guard let modelURL = Bundle.main.url(forResource:self.modelName, withExtension:"momd") else {
@@ -23,24 +30,25 @@ public class CoreDataManager {
     
     private lazy var persistantStoreCoordinator : NSPersistentStoreCoordinator = {
         
-        let persistantCord = NSPersistentStoreCoordinator(managedObjectModel: self.managedObjectModel)
-        
-        let fileManager = FileManager.default
-        let storeName = self.modelName!+".sqlite"
-        let documentDirectoryPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let persistantStoreCoordinatorPath = documentDirectoryPath.appendingPathComponent(storeName)
-        do {
-            
-            let options = [NSMigratePersistentStoresAutomaticallyOption : true,
-                           NSInferMappingModelAutomaticallyOption : true]
-            
-            try persistantCord.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: persistantStoreCoordinatorPath, options: options)
-            
-            
-        } catch {
-            fatalError("fatal error")
-        }
-        return persistantCord
+        return NSPersistentStoreCoordinator(managedObjectModel: self.managedObjectModel)
+//        let persistantCord = NSPersistentStoreCoordinator(managedObjectModel: self.managedObjectModel)
+//
+//        let fileManager = FileManager.default
+//        let storeName = self.modelName!+".sqlite"
+//        let documentDirectoryPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+//        let persistantStoreCoordinatorPath = documentDirectoryPath.appendingPathComponent(storeName)
+//        do {
+//
+//            let options = [NSMigratePersistentStoresAutomaticallyOption : true,
+//                           NSInferMappingModelAutomaticallyOption : true]
+//
+//            try persistantCord.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: persistantStoreCoordinatorPath, options: options)
+//
+//
+//        } catch {
+//            fatalError("fatal error")
+//        }
+//        return persistantCord
     }()
     
     
@@ -59,6 +67,15 @@ public class CoreDataManager {
         managedObjectContext.parent = self.privateManagedObjectContext
         return managedObjectContext
     }()
+    
+    
+   public func privateChildManagedObjectContext()->NSManagedObjectContext {
+   
+    let managedObjectContext = NSManagedObjectContext(concurrencyType: .privateQueueConcurrencyType)
+    managedObjectContext.parent = self.mainManagedObjectContext
+   return managedObjectContext
+    }
+   
     
     public func save() {
         
@@ -88,10 +105,53 @@ public class CoreDataManager {
         }
     }
     
+    func setUpCoreDataStack(){
+        
+        guard let storeCoordinator = mainManagedObjectContext.persistentStoreCoordinator else {
+            fatalError("Erorr in fetching store coordinator")
+        }
+        
+        DispatchQueue.global().async {
+            
+           self.addPersistentStore(to: storeCoordinator)
+            
+            DispatchQueue.main.async {
+                self.completion()
+            }
+            
+        }
+        
+    }
     
-    public let modelName:String?
-    init(modelName:String) {
+    
+    
+    func addPersistentStore(to persistantStoreCoordinator:NSPersistentStoreCoordinator) {
+        
+        let fileManager = FileManager.default
+        let storeName = self.modelName!+".sqlite"
+        let documentDirectoryPath = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let persistantStoreCoordinatorPath = documentDirectoryPath.appendingPathComponent(storeName)
+        do {
+            
+            let options = [NSMigratePersistentStoresAutomaticallyOption : true,
+                           NSInferMappingModelAutomaticallyOption : true]
+            
+            try persistantStoreCoordinator.addPersistentStore(ofType: NSSQLiteStoreType, configurationName: nil, at: persistantStoreCoordinatorPath, options: options)
+            
+            
+        } catch {
+            fatalError("fatal error")
+        }
+        
+    }
+    
+    
+    init(modelName:String,completionBlock:@escaping CoreDataManagerCompletion) {
         self.modelName = modelName
+        self.completion = completionBlock
+        
+        setUpCoreDataStack()
+        
     }
 
 }

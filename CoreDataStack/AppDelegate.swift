@@ -13,7 +13,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
-    private let coreDataModel = CoreDataManager(modelName: "Model")
+    private let coreDataModel = CoreDataManager(modelName: "Model", completionBlock:{
+    })
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
